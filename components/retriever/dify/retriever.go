@@ -46,18 +46,11 @@ type RetrieverConfig struct {
 
 type RetrievalModel struct {
 	// 检索方法：以下三个关键字之一，必填
-	SearchMethod          SearchMethod   `json:"search_method"`
-	RerankingEnable       bool           `json:"reranking_enable"`
-	RerankingMode         *RerankingMode `json:"reranking_mode"`
-	Weights               float64        `json:"weights"`
-	TopK                  *int           `json:"top_k"`
-	ScoreThresholdEnabled bool           `json:"score_threshold_enabled"`
-	ScoreThreshold        *float64       `json:"score_threshold"`
-}
-
-type RerankingMode struct {
-	RerankingProviderName string `json:"reranking_provider_name"`
-	RerankingModelName    string `json:"reranking_model_name"`
+	SearchMethod          SearchMethod `json:"search_method"`
+	Weights               float64      `json:"weights"`
+	TopK                  *int         `json:"top_k"`
+	ScoreThresholdEnabled bool         `json:"score_threshold_enabled"`
+	ScoreThreshold        *float64     `json:"score_threshold"`
 }
 
 type Retriever struct {
