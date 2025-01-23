@@ -138,7 +138,7 @@ func (r *Retriever) IsCallbacksEnabled() bool {
 }
 
 func (x *RetrieverConfig) toRetrievalModel() *retrievalModel {
-	if x == nil || x.SearchMethod == "" {
+	if x == nil {
 		return nil
 	}
 	return &retrievalModel{

@@ -175,18 +175,6 @@ func TestNewRetrieverWithSearchMethod(t *testing.T) {
 	PatchConvey("test NewRetriever with search method", t, func() {
 		ctx := context.Background()
 
-		PatchConvey("test empty search method", func() {
-			ret, err := NewRetriever(ctx, &RetrieverConfig{
-				APIKey:       "test",
-				Endpoint:     "https://api.dify.ai/v1",
-				DatasetID:    "test",
-				SearchMethod: "",
-			})
-			convey.So(err, convey.ShouldBeNil)
-			convey.So(ret, convey.ShouldNotBeNil)
-			convey.So(ret.retrievalModel, convey.ShouldBeNil)
-		})
-
 		PatchConvey("test full text search", func() {
 			ret, err := NewRetriever(ctx, &RetrieverConfig{
 				APIKey:       "test",
@@ -252,12 +240,6 @@ func TestToRetrievalModel(t *testing.T) {
 	PatchConvey("test toRetrievalModel", t, func() {
 		PatchConvey("test nil config", func() {
 			var config *RetrieverConfig
-			model := config.toRetrievalModel()
-			convey.So(model, convey.ShouldBeNil)
-		})
-
-		PatchConvey("test empty search method", func() {
-			config := &RetrieverConfig{}
 			model := config.toRetrievalModel()
 			convey.So(model, convey.ShouldBeNil)
 		})
