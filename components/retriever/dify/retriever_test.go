@@ -171,35 +171,113 @@ func TestRetrieve(t *testing.T) {
 	})
 }
 
-func TestNewRetrieverWithRetrievalModel(t *testing.T) {
-	PatchConvey("test NewRetriever with retrieval model", t, func() {
+func TestNewRetrieverWithSearchMethod(t *testing.T) {
+	PatchConvey("test NewRetriever with search method", t, func() {
 		ctx := context.Background()
 
 		PatchConvey("test empty search method", func() {
 			ret, err := NewRetriever(ctx, &RetrieverConfig{
-				APIKey:         "test",
-				Endpoint:       "https://api.dify.ai/v1",
-				DatasetID:      "test",
-				RetrievalModel: &RetrievalModel{},
+				APIKey:       "test",
+				Endpoint:     "https://api.dify.ai/v1",
+				DatasetID:    "test",
+				SearchMethod: "",
 			})
-			convey.So(err, convey.ShouldNotBeNil)
-			convey.So(err.Error(), convey.ShouldContainSubstring, "search_method is required")
-			convey.So(ret, convey.ShouldBeNil)
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(ret, convey.ShouldNotBeNil)
+			convey.So(ret.retrievalModel, convey.ShouldBeNil)
 		})
 
-		PatchConvey("test success", func() {
+		PatchConvey("test full text search", func() {
 			ret, err := NewRetriever(ctx, &RetrieverConfig{
-				APIKey:    "test",
-				Endpoint:  "https://api.dify.ai/v1",
-				DatasetID: "test",
-				RetrievalModel: &RetrievalModel{
-					SearchMethod: SearchMethodFullText,
-				},
+				APIKey:       "test",
+				Endpoint:     "https://api.dify.ai/v1",
+				DatasetID:    "test",
+				SearchMethod: SearchMethodFullText,
 			})
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(ret, convey.ShouldNotBeNil)
 			convey.So(ret.retrievalModel, convey.ShouldNotBeNil)
 			convey.So(ret.retrievalModel.SearchMethod, convey.ShouldEqual, SearchMethodFullText)
+		})
+
+		PatchConvey("test hybrid search with weights", func() {
+			ret, err := NewRetriever(ctx, &RetrieverConfig{
+				APIKey:       "test",
+				Endpoint:     "https://api.dify.ai/v1",
+				DatasetID:    "test",
+				SearchMethod: SearchMethodHybrid,
+				Weights:      0.7,
+			})
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(ret, convey.ShouldNotBeNil)
+			convey.So(ret.retrievalModel, convey.ShouldNotBeNil)
+			convey.So(ret.retrievalModel.SearchMethod, convey.ShouldEqual, SearchMethodHybrid)
+			convey.So(ret.retrievalModel.Weights, convey.ShouldEqual, 0.7)
+		})
+
+		PatchConvey("test with score threshold", func() {
+			threshold := 0.8
+			ret, err := NewRetriever(ctx, &RetrieverConfig{
+				APIKey:                "test",
+				Endpoint:              "https://api.dify.ai/v1",
+				DatasetID:             "test",
+				SearchMethod:          SearchMethodFullText,
+				ScoreThreshold:        &threshold,
+				ScoreThresholdEnabled: true,
+			})
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(ret, convey.ShouldNotBeNil)
+			convey.So(ret.retrievalModel, convey.ShouldNotBeNil)
+			convey.So(ret.retrievalModel.ScoreThresholdEnabled, convey.ShouldBeTrue)
+			convey.So(*ret.retrievalModel.ScoreThreshold, convey.ShouldEqual, threshold)
+		})
+	})
+}
+
+func TestGetType(t *testing.T) {
+	PatchConvey("test GetType", t, func() {
+		r := &Retriever{}
+		convey.So(r.GetType(), convey.ShouldEqual, typ)
+	})
+}
+
+func TestIsCallbacksEnabled(t *testing.T) {
+	PatchConvey("test IsCallbacksEnabled", t, func() {
+		r := &Retriever{}
+		convey.So(r.IsCallbacksEnabled(), convey.ShouldBeTrue)
+	})
+}
+
+func TestToRetrievalModel(t *testing.T) {
+	PatchConvey("test toRetrievalModel", t, func() {
+		PatchConvey("test nil config", func() {
+			var config *RetrieverConfig
+			model := config.toRetrievalModel()
+			convey.So(model, convey.ShouldBeNil)
+		})
+
+		PatchConvey("test empty search method", func() {
+			config := &RetrieverConfig{}
+			model := config.toRetrievalModel()
+			convey.So(model, convey.ShouldBeNil)
+		})
+
+		PatchConvey("test with search method", func() {
+			threshold := 0.8
+			config := &RetrieverConfig{
+				SearchMethod:          SearchMethodFullText,
+				Weights:               0.7,
+				TopK:                  ptrOf(10),
+				ScoreThreshold:        &threshold,
+				ScoreThresholdEnabled: true,
+			}
+			model := config.toRetrievalModel()
+			convey.So(model, convey.ShouldNotBeNil)
+			convey.So(model.SearchMethod, convey.ShouldEqual, SearchMethodFullText)
+			convey.So(model.Weights, convey.ShouldEqual, 0.7)
+			convey.So(*model.TopK, convey.ShouldEqual, 10)
+			convey.So(*model.ScoreThreshold, convey.ShouldEqual, threshold)
+			convey.So(model.ScoreThresholdEnabled, convey.ShouldBeTrue)
 		})
 	})
 }

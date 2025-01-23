@@ -17,20 +17,35 @@
 package dify
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
+
+	"github.com/bytedance/sonic"
 
 	"github.com/cloudwego/eino/schema"
 )
 
+const (
+	orgDocIDKey   = "org_doc_id"
+	orgDocNameKey = "org_doc_name"
+	keywordsKey   = "keywords"
+)
+
+type retrievalModel struct {
+	SearchMethod          SearchMethod `json:"search_method"`
+	Weights               float64      `json:"weights"`
+	TopK                  *int         `json:"top_k"`
+	ScoreThresholdEnabled bool         `json:"score_threshold_enabled"`
+	ScoreThreshold        *float64     `json:"score_threshold"`
+}
+
 // request Body
 type request struct {
 	Query          string          `json:"query"`
-	RetrievalModel *RetrievalModel `json:"retrieval_model,omitempty"`
+	RetrievalModel *retrievalModel `json:"retrieval_model,omitempty"`
 }
 
 type errorResponse struct {
@@ -92,12 +107,13 @@ func (r *Retriever) doPost(ctx context.Context, query string) (res *successRespo
 		Query:          query,
 		RetrievalModel: r.retrievalModel,
 	}
-	jsonData, err := json.Marshal(data)
+
+	reqData, err := sonic.MarshalString(data)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling data: %w", err)
 	}
 	// 发送检索请求
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, r.getUrl(), bytes.NewReader(jsonData))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, r.getUrl(), strings.NewReader(reqData))
 	if err != nil {
 		return nil, fmt.Errorf("create request failed: %w", err)
 	}
@@ -108,17 +124,21 @@ func (r *Retriever) doPost(ctx context.Context, query string) (res *successRespo
 		return nil, fmt.Errorf("do request failed: %w", err)
 	}
 	defer resp.Body.Close()
+	var body []byte
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %w", err)
+	}
 	// 请求失败
 	if resp.StatusCode != http.StatusOK {
 		errResp := &errorResponse{}
-		if err = json.NewDecoder(resp.Body).Decode(&errResp); err == nil && errResp.Message != "" {
+		if err = sonic.Unmarshal(body, errResp); err == nil && errResp.Message != "" {
 			return nil, fmt.Errorf("request failed: %s", errResp.Message)
 		}
 		return nil, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
 	}
 	res = &successResponse{}
-
-	if err = json.NewDecoder(resp.Body).Decode(&res); err != nil {
+	if err = sonic.Unmarshal(body, res); err != nil {
 		return nil, fmt.Errorf("decode response failed: %w", err)
 	}
 
@@ -135,5 +155,52 @@ func (x *Record) toDoc() *schema.Document {
 		MetaData: map[string]any{},
 	}
 	doc.WithScore(x.Score)
+	setOrgDocID(doc, x.Segment.DocumentId)
+	setKeywords(doc, x.Segment.Keywords)
+	if x.Segment.Document != nil {
+		setOrgDocName(doc, x.Segment.Document.Name)
+	}
 	return doc
+}
+
+func setOrgDocID(doc *schema.Document, id string) {
+	if doc == nil {
+		return
+	}
+	doc.MetaData[orgDocIDKey] = id
+}
+
+func setOrgDocName(doc *schema.Document, name string) {
+	if doc == nil {
+		return
+	}
+	doc.MetaData[orgDocNameKey] = name
+}
+
+func setKeywords(doc *schema.Document, keywords []string) {
+	if doc == nil {
+		return
+	}
+	doc.MetaData[keywordsKey] = keywords
+}
+
+func GetOrgDocID(doc *schema.Document) string {
+	if doc == nil {
+		return ""
+	}
+	return doc.MetaData[orgDocIDKey].(string)
+}
+
+func GetOrgDocName(doc *schema.Document) string {
+	if doc == nil {
+		return ""
+	}
+	return doc.MetaData[orgDocNameKey].(string)
+}
+
+func GetKeywords(doc *schema.Document) []string {
+	if doc == nil {
+		return nil
+	}
+	return doc.MetaData[keywordsKey].([]string)
 }

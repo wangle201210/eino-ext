@@ -37,26 +37,23 @@ type RetrieverConfig struct {
 	DatasetID string `json:"dataset_id"`
 	// ScoreThreshold 是文档相关性评分的阈值
 	ScoreThreshold *float64 `json:"score_threshold,omitempty"`
-	// RetrievalModel 定义了检索模型的参数，如不填则使用默认配置
-	RetrievalModel *RetrievalModel `json:"retrieval_model,omitempty"`
+	// *retrievalModel `json:"retrieval_model,omitempty"`
 	// TopK 定义了返回结果的最大数量
 	TopK *int `json:"top_k,omitempty"`
 	// Timeout 定义了 HTTP 连接超时时间
 	Timeout time.Duration `json:"timeout,omitempty"`
-}
-
-type RetrievalModel struct {
-	SearchMethod          SearchMethod `json:"search_method"`
-	Weights               float64      `json:"weights"`
-	TopK                  *int         `json:"top_k"`
-	ScoreThresholdEnabled bool         `json:"score_threshold_enabled"`
-	ScoreThreshold        *float64     `json:"score_threshold"`
+	// SearchMethod 检索方法，如果不填则按照默认方式召回
+	SearchMethod SearchMethod `json:"search_method"`
+	// Weights 混合检索模式下语意检索的权重设置
+	Weights float64 `json:"weights"`
+	// ScoreThresholdEnabled 是否开启 score 阈值
+	ScoreThresholdEnabled bool `json:"score_threshold_enabled"`
 }
 
 type Retriever struct {
 	config         *RetrieverConfig
 	client         *http.Client
-	retrievalModel *RetrievalModel
+	retrievalModel *retrievalModel
 }
 
 func NewRetriever(ctx context.Context, config *RetrieverConfig) (*Retriever, error) {
@@ -73,15 +70,6 @@ func NewRetriever(ctx context.Context, config *RetrieverConfig) (*Retriever, err
 	if config.Endpoint == "" {
 		config.Endpoint = defaultEndpoint
 	}
-	if config.RetrievalModel != nil {
-		if config.RetrievalModel.SearchMethod == "" {
-			return nil, fmt.Errorf("search_method is required")
-		}
-		if config.RetrievalModel.TopK == nil {
-			config.RetrievalModel.TopK = config.TopK
-		}
-		config.RetrievalModel.ScoreThreshold = config.ScoreThreshold
-	}
 	httpClient := &http.Client{}
 	if config.Timeout != 0 {
 		httpClient.Timeout = config.Timeout
@@ -89,7 +77,7 @@ func NewRetriever(ctx context.Context, config *RetrieverConfig) (*Retriever, err
 	return &Retriever{
 		config:         config,
 		client:         httpClient,
-		retrievalModel: config.RetrievalModel,
+		retrievalModel: config.toRetrievalModel(),
 	}, nil
 }
 
@@ -147,4 +135,17 @@ func (r *Retriever) GetType() string {
 
 func (r *Retriever) IsCallbacksEnabled() bool {
 	return true
+}
+
+func (x *RetrieverConfig) toRetrievalModel() *retrievalModel {
+	if x == nil || x.SearchMethod == "" {
+		return nil
+	}
+	return &retrievalModel{
+		SearchMethod:          x.SearchMethod,
+		Weights:               x.Weights,
+		TopK:                  x.TopK,
+		ScoreThresholdEnabled: x.ScoreThresholdEnabled,
+		ScoreThreshold:        x.ScoreThreshold,
+	}
 }
