@@ -100,14 +100,14 @@ type Query struct {
 }
 
 type Segment struct {
-	Id            string    `json:"id"`
+	ID            string    `json:"id"`
 	Position      int       `json:"position"`
-	DocumentId    string    `json:"document_id"`
+	DocumentID    string    `json:"document_id"`
 	Content       string    `json:"content"`
 	WordCount     int       `json:"word_count"`
 	Tokens        int       `json:"tokens"`
 	Keywords      []string  `json:"keywords"`
-	IndexNodeId   string    `json:"index_node_id"`
+	IndexNodeID   string    `json:"index_node_id"`
 	IndexNodeHash string    `json:"index_node_hash"`
 	HitCount      int       `json:"hit_count"`
 	Enabled       bool      `json:"enabled"`
@@ -120,7 +120,7 @@ type Segment struct {
 }
 
 type Document struct {
-	Id             string `json:"id"`
+	ID             string `json:"id"`
 	DataSourceType string `json:"data_source_type"`
 	Name           string `json:"name"`
 }
@@ -135,7 +135,7 @@ type successResponse struct {
 	Records []*Record `json:"records"`
 }
 
-func (r *Retriever) getUrl() string {
+func (r *Retriever) getURL() string {
 	return strings.TrimRight(r.config.Endpoint, "/") + "/datasets/" + r.config.DatasetID + "/retrieve"
 }
 
@@ -163,7 +163,7 @@ func (r *Retriever) doPost(ctx context.Context, query string, option *retriever.
 		return nil, fmt.Errorf("error marshaling data: %w", err)
 	}
 	// 发送检索请求
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, r.getUrl(), strings.NewReader(reqData))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, r.getURL(), strings.NewReader(reqData))
 	if err != nil {
 		return nil, fmt.Errorf("create request failed: %w", err)
 	}
@@ -200,12 +200,12 @@ func (x *Record) toDoc() *schema.Document {
 		return nil
 	}
 	doc := &schema.Document{
-		ID:       x.Segment.Id,
+		ID:       x.Segment.ID,
 		Content:  x.Segment.Content,
 		MetaData: map[string]any{},
 	}
 	doc.WithScore(x.Score)
-	setOrgDocID(doc, x.Segment.DocumentId)
+	setOrgDocID(doc, x.Segment.DocumentID)
 	setKeywords(doc, x.Segment.Keywords)
 	if x.Segment.Document != nil {
 		setOrgDocName(doc, x.Segment.Document.Name)

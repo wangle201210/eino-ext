@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/cloudwego/eino-ext/components/retriever/dify"
 )
@@ -33,6 +34,9 @@ var (
 )
 
 func main() {
+	APIKey = os.Getenv("DIFY_DATASET_API_KEY")
+	Endpoint = os.Getenv("DIFY_ENDPOINT")
+	DatasetID = os.Getenv("DIFY_DATASET_ID")
 	// 创建基本的 Dify Retriever
 	basicExample()
 
