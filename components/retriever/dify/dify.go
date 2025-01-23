@@ -34,18 +34,26 @@ const (
 	keywordsKey   = "keywords"
 )
 
-type retrievalModel struct {
-	SearchMethod          SearchMethod `json:"search_method"`
-	Weights               float64      `json:"weights"`
-	TopK                  *int         `json:"top_k"`
-	ScoreThresholdEnabled bool         `json:"score_threshold_enabled"`
-	ScoreThreshold        *float64     `json:"score_threshold"`
+type RetrievalModel struct {
+	SearchMethod          SearchMethod    `json:"search_method"`
+	RerankingEnable       *bool           `json:"reranking_enable"`
+	RerankingMode         *string         `json:"reranking_mode"`
+	RerankingModel        *RerankingModel `json:"reranking_model"`
+	Weights               *float64        `json:"weights"`
+	TopK                  *int            `json:"top_k,omitempty"`
+	ScoreThresholdEnabled *bool           `json:"score_threshold_enabled"`
+	ScoreThreshold        *float64        `json:"score_threshold"`
+}
+
+type RerankingModel struct {
+	RerankingProviderName string `json:"reranking_provider_name"`
+	RerankingModelName    string `json:"reranking_model_name"`
 }
 
 // request Body
 type request struct {
 	Query          string          `json:"query"`
-	RetrievalModel *retrievalModel `json:"retrieval_model,omitempty"`
+	RetrievalModel *RetrievalModel `json:"retrieval_model,omitempty"`
 }
 
 type errorResponse struct {
@@ -105,7 +113,7 @@ func (r *Retriever) getAuth() string {
 func (r *Retriever) doPost(ctx context.Context, query string) (res *successResponse, err error) {
 	data := &request{
 		Query:          query,
-		RetrievalModel: r.retrievalModel,
+		RetrievalModel: r.config.RetrievalModel,
 	}
 
 	reqData, err := sonic.MarshalString(data)

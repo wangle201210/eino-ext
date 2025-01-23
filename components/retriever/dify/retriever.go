@@ -30,30 +30,20 @@ import (
 // RetrieverConfig 定义了 Dify Retriever 的配置参数
 type RetrieverConfig struct {
 	// APIKey 是 Dify API 的认证密钥
-	APIKey string `json:"api_key"`
+	APIKey string
 	// Endpoint 是 Dify API 的服务地址
-	Endpoint string `json:"endpoint"`
+	Endpoint string
 	// DatasetID 是知识库的唯一标识
-	DatasetID string `json:"dataset_id"`
-	// ScoreThreshold 是文档相关性评分的阈值
-	ScoreThreshold *float64 `json:"score_threshold,omitempty"`
-	// *retrievalModel `json:"retrieval_model,omitempty"`
-	// TopK 定义了返回结果的最大数量
-	TopK *int `json:"top_k,omitempty"`
+	DatasetID string
+	// RetrievalModel 检索参数 选填，如不填，按照默认方式召回
+	RetrievalModel *RetrievalModel
 	// Timeout 定义了 HTTP 连接超时时间
-	Timeout time.Duration `json:"timeout,omitempty"`
-	// SearchMethod 检索方法，如果不填则按照默认方式召回
-	SearchMethod SearchMethod `json:"search_method"`
-	// Weights 混合检索模式下语意检索的权重设置
-	Weights float64 `json:"weights"`
-	// ScoreThresholdEnabled 是否开启 score 阈值
-	ScoreThresholdEnabled bool `json:"score_threshold_enabled"`
+	Timeout time.Duration
 }
 
 type Retriever struct {
-	config         *RetrieverConfig
-	client         *http.Client
-	retrievalModel *retrievalModel
+	config *RetrieverConfig
+	client *http.Client
 }
 
 func NewRetriever(ctx context.Context, config *RetrieverConfig) (*Retriever, error) {
@@ -67,6 +57,10 @@ func NewRetriever(ctx context.Context, config *RetrieverConfig) (*Retriever, err
 		return nil, fmt.Errorf("dataset_id is required")
 	}
 
+	if config.RetrievalModel != nil && config.RetrievalModel.SearchMethod == "" {
+		return nil, fmt.Errorf("if retrieval_model is set, search_method is required")
+	}
+
 	if config.Endpoint == "" {
 		config.Endpoint = defaultEndpoint
 	}
@@ -75,9 +69,8 @@ func NewRetriever(ctx context.Context, config *RetrieverConfig) (*Retriever, err
 		httpClient.Timeout = config.Timeout
 	}
 	return &Retriever{
-		config:         config,
-		client:         httpClient,
-		retrievalModel: config.toRetrievalModel(),
+		config: config,
+		client: httpClient,
 	}, nil
 }
 
@@ -91,10 +84,12 @@ func (r *Retriever) Retrieve(ctx context.Context, query string, opts ...retrieve
 	}()
 
 	// 合并检索选项
-	options := retriever.GetCommonOptions(&retriever.Options{
-		TopK:           r.config.TopK,
-		ScoreThreshold: r.config.ScoreThreshold,
-	}, opts...)
+	baseOptions := &retriever.Options{}
+	if r.config.RetrievalModel != nil {
+		baseOptions.TopK = r.config.RetrievalModel.TopK
+		baseOptions.ScoreThreshold = r.config.RetrievalModel.ScoreThreshold
+	}
+	options := retriever.GetCommonOptions(baseOptions, opts...)
 
 	// 开始检索回调
 	ctx = callbacks.OnStart(ctx, &retriever.CallbackInput{
@@ -135,17 +130,4 @@ func (r *Retriever) GetType() string {
 
 func (r *Retriever) IsCallbacksEnabled() bool {
 	return true
-}
-
-func (x *RetrieverConfig) toRetrievalModel() *retrievalModel {
-	if x == nil {
-		return nil
-	}
-	return &retrievalModel{
-		SearchMethod:          x.SearchMethod,
-		Weights:               x.Weights,
-		TopK:                  x.TopK,
-		ScoreThresholdEnabled: x.ScoreThresholdEnabled,
-		ScoreThreshold:        x.ScoreThreshold,
-	}
 }

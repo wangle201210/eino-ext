@@ -48,7 +48,6 @@ func basicExample() {
 		APIKey:    APIKey,
 		Endpoint:  Endpoint,
 		DatasetID: DatasetID,
-		TopK:      ptrOf(5), // 返回前5个最相关的文档
 	})
 	if err != nil {
 		log.Fatalf("Failed to create retriever: %v", err)
@@ -74,10 +73,14 @@ func scoreThresholdExample() {
 	// 创建带有分数阈值的 Dify Retriever
 	threshold := 0.7 // 设置相关性分数阈值
 	ret, err := dify.NewRetriever(ctx, &dify.RetrieverConfig{
-		APIKey:         APIKey,
-		Endpoint:       Endpoint,
-		DatasetID:      DatasetID,
-		ScoreThreshold: &threshold,
+		APIKey:    APIKey,
+		Endpoint:  Endpoint,
+		DatasetID: DatasetID,
+		RetrievalModel: &dify.RetrievalModel{
+			SearchMethod:   dify.SearchMethodHybrid,
+			TopK:           ptrOf(10),
+			ScoreThreshold: ptrOf(threshold),
+		},
 	})
 	if err != nil {
 		log.Fatalf("Failed to create retriever: %v", err)
