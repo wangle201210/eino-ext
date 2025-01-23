@@ -17,8 +17,8 @@
 package dify
 
 const (
-	defaultTopK = 10
-	typ         = "Dify"
+	defaultEndpoint = "https://api.dify.ai/v1"
+	typ             = "Dify"
 )
 
 type SearchMethod string

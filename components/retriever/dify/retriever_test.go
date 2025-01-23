@@ -25,9 +25,8 @@ import (
 	"testing"
 
 	. "github.com/bytedance/mockey"
-	"github.com/smartystreets/goconvey/convey"
-
 	"github.com/cloudwego/eino/components/retriever"
+	"github.com/smartystreets/goconvey/convey"
 )
 
 func TestNewRetriever(t *testing.T) {
@@ -44,7 +43,7 @@ func TestNewRetriever(t *testing.T) {
 
 			PatchConvey("test empty api_key", func() {
 				ret, err := NewRetriever(ctx, &RetrieverConfig{
-					Endpoint:  "https://api.dify.ai",
+					Endpoint:  "https://api.dify.ai/v1",
 					DatasetID: "test",
 				})
 				convey.So(err, convey.ShouldNotBeNil)
@@ -53,19 +52,17 @@ func TestNewRetriever(t *testing.T) {
 			})
 
 			PatchConvey("test empty endpoint", func() {
-				ret, err := NewRetriever(ctx, &RetrieverConfig{
+				_, err := NewRetriever(ctx, &RetrieverConfig{
 					APIKey:    "test",
 					DatasetID: "test",
 				})
-				convey.So(err, convey.ShouldNotBeNil)
-				convey.So(err.Error(), convey.ShouldContainSubstring, "endpoint is required")
-				convey.So(ret, convey.ShouldBeNil)
+				convey.So(err, convey.ShouldBeNil)
 			})
 
 			PatchConvey("test empty dataset_id", func() {
 				ret, err := NewRetriever(ctx, &RetrieverConfig{
 					APIKey:   "test",
-					Endpoint: "https://api.dify.ai",
+					Endpoint: "https://api.dify.ai/v1",
 				})
 				convey.So(err, convey.ShouldNotBeNil)
 				convey.So(err.Error(), convey.ShouldContainSubstring, "dataset_id is required")
@@ -76,12 +73,11 @@ func TestNewRetriever(t *testing.T) {
 		PatchConvey("test success", func() {
 			ret, err := NewRetriever(ctx, &RetrieverConfig{
 				APIKey:    "test",
-				Endpoint:  "https://api.dify.ai",
+				Endpoint:  "https://api.dify.ai/v1",
 				DatasetID: "test",
 			})
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(ret, convey.ShouldNotBeNil)
-			convey.So(*ret.config.TopK, convey.ShouldEqual, defaultTopK)
 		})
 	})
 }
@@ -92,7 +88,7 @@ func TestRetrieve(t *testing.T) {
 		r := &Retriever{
 			config: &RetrieverConfig{
 				APIKey:    "test",
-				Endpoint:  "https://api.dify.ai",
+				Endpoint:  "https://api.dify.ai/v1",
 				DatasetID: "test",
 				TopK:      ptrOf(10),
 			},
@@ -124,7 +120,7 @@ func TestRetrieve(t *testing.T) {
 		})
 
 		PatchConvey("test success", func() {
-			response := &SuccessResponse{
+			response := &successResponse{
 				Query: &Query{Content: "test query"},
 				Records: []*Record{
 					{
@@ -181,12 +177,10 @@ func TestNewRetrieverWithRetrievalModel(t *testing.T) {
 
 		PatchConvey("test empty search method", func() {
 			ret, err := NewRetriever(ctx, &RetrieverConfig{
-				APIKey:    "test",
-				Endpoint:  "https://api.dify.ai",
-				DatasetID: "test",
-				RetrievalModel: &RetrievalModel{
-					RerankingEnable: true,
-				},
+				APIKey:         "test",
+				Endpoint:       "https://api.dify.ai/v1",
+				DatasetID:      "test",
+				RetrievalModel: &RetrievalModel{},
 			})
 			convey.So(err, convey.ShouldNotBeNil)
 			convey.So(err.Error(), convey.ShouldContainSubstring, "search_method is required")
@@ -196,18 +190,16 @@ func TestNewRetrieverWithRetrievalModel(t *testing.T) {
 		PatchConvey("test success", func() {
 			ret, err := NewRetriever(ctx, &RetrieverConfig{
 				APIKey:    "test",
-				Endpoint:  "https://api.dify.ai",
+				Endpoint:  "https://api.dify.ai/v1",
 				DatasetID: "test",
 				RetrievalModel: &RetrievalModel{
-					SearchMethod:    SearchMethodFullText,
-					RerankingEnable: true,
+					SearchMethod: SearchMethodFullText,
 				},
 			})
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(ret, convey.ShouldNotBeNil)
 			convey.So(ret.retrievalModel, convey.ShouldNotBeNil)
 			convey.So(ret.retrievalModel.SearchMethod, convey.ShouldEqual, SearchMethodFullText)
-			convey.So(ret.retrievalModel.RerankingEnable, convey.ShouldBeTrue)
 		})
 	})
 }

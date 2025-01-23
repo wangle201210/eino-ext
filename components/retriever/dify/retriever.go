@@ -19,11 +19,12 @@ package dify
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/cloudwego/eino/callbacks"
 	"github.com/cloudwego/eino/components/retriever"
 	"github.com/cloudwego/eino/schema"
-	"net/http"
-	"time"
 )
 
 // RetrieverConfig 定义了 Dify Retriever 的配置参数
@@ -40,12 +41,11 @@ type RetrieverConfig struct {
 	RetrievalModel *RetrievalModel `json:"retrieval_model,omitempty"`
 	// TopK 定义了返回结果的最大数量
 	TopK *int `json:"top_k,omitempty"`
-	// ConnectionTimeout 定义了 HTTP 连接超时时间（秒）
-	ConnectionTimeout int64 `json:"connection_timeout,omitempty"`
+	// Timeout 定义了 HTTP 连接超时时间
+	Timeout time.Duration `json:"timeout,omitempty"`
 }
 
 type RetrievalModel struct {
-	// 检索方法：以下三个关键字之一，必填
 	SearchMethod          SearchMethod `json:"search_method"`
 	Weights               float64      `json:"weights"`
 	TopK                  *int         `json:"top_k"`
@@ -63,32 +63,28 @@ func NewRetriever(ctx context.Context, config *RetrieverConfig) (*Retriever, err
 	if config == nil {
 		return nil, fmt.Errorf("config is required")
 	}
-
 	if config.APIKey == "" {
 		return nil, fmt.Errorf("api_key is required")
 	}
-
-	if config.Endpoint == "" {
-		return nil, fmt.Errorf("endpoint is required")
-	}
-
 	if config.DatasetID == "" {
 		return nil, fmt.Errorf("dataset_id is required")
 	}
 
-	if config.TopK == nil {
-		config.TopK = ptrOf(defaultTopK)
+	if config.Endpoint == "" {
+		config.Endpoint = defaultEndpoint
 	}
 	if config.RetrievalModel != nil {
 		if config.RetrievalModel.SearchMethod == "" {
 			return nil, fmt.Errorf("search_method is required")
 		}
-		config.RetrievalModel.TopK = config.TopK
+		if config.RetrievalModel.TopK == nil {
+			config.RetrievalModel.TopK = config.TopK
+		}
 		config.RetrievalModel.ScoreThreshold = config.ScoreThreshold
 	}
 	httpClient := &http.Client{}
-	if config.ConnectionTimeout != 0 {
-		httpClient.Timeout = time.Second * time.Duration(config.ConnectionTimeout)
+	if config.Timeout != 0 {
+		httpClient.Timeout = config.Timeout
 	}
 	return &Retriever{
 		config:         config,
@@ -135,7 +131,7 @@ func (r *Retriever) Retrieve(ctx context.Context, query string, opts ...retrieve
 		if options.ScoreThreshold != nil && record.Score < *options.ScoreThreshold {
 			continue
 		}
-		doc := record.ToDoc()
+		doc := record.toDoc()
 		docs = append(docs, doc)
 	}
 

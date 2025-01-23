@@ -27,7 +27,7 @@ import (
 // dify 的文档参考 https://docs.dify.ai/zh-hans/guides/knowledge-base/knowledge-and-documents-maintenance/maintain-dataset-via-api
 
 var (
-	Endpoint  = "https://api.dify.ai"
+	Endpoint  = "https://api.dify.ai/v1"
 	APIKey    = "dataset-api-key"
 	DatasetID = "dataset-id"
 )

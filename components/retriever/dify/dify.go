@@ -21,18 +21,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/cloudwego/eino/schema"
 	"net/http"
 	"strings"
+
+	"github.com/cloudwego/eino/schema"
 )
 
-// Request Body
-type Request struct {
+// request Body
+type request struct {
 	Query          string          `json:"query"`
 	RetrievalModel *RetrievalModel `json:"retrieval_model,omitempty"`
 }
 
-type ErrorResponse struct {
+type errorResponse struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
 	Status  int    `json:"status"`
@@ -73,21 +74,21 @@ type Record struct {
 	Score   float64 `json:"score"`
 }
 
-type SuccessResponse struct {
+type successResponse struct {
 	Query   *Query    `json:"query"`
 	Records []*Record `json:"records"`
 }
 
 func (r *Retriever) getUrl() string {
-	return strings.TrimRight(r.config.Endpoint, "/") + "/v1/datasets/" + r.config.DatasetID + "/retrieve"
+	return strings.TrimRight(r.config.Endpoint, "/") + "/datasets/" + r.config.DatasetID + "/retrieve"
 }
 
 func (r *Retriever) getAuth() string {
 	return fmt.Sprintf("Bearer %s", r.config.APIKey)
 }
 
-func (r *Retriever) doPost(ctx context.Context, query string) (res *SuccessResponse, err error) {
-	data := &Request{
+func (r *Retriever) doPost(ctx context.Context, query string) (res *successResponse, err error) {
+	data := &request{
 		Query:          query,
 		RetrievalModel: r.retrievalModel,
 	}
@@ -109,13 +110,13 @@ func (r *Retriever) doPost(ctx context.Context, query string) (res *SuccessRespo
 	defer resp.Body.Close()
 	// 请求失败
 	if resp.StatusCode != http.StatusOK {
-		errResp := &ErrorResponse{}
+		errResp := &errorResponse{}
 		if err = json.NewDecoder(resp.Body).Decode(&errResp); err == nil && errResp.Message != "" {
 			return nil, fmt.Errorf("request failed: %s", errResp.Message)
 		}
 		return nil, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
 	}
-	res = &SuccessResponse{}
+	res = &successResponse{}
 
 	if err = json.NewDecoder(resp.Body).Decode(&res); err != nil {
 		return nil, fmt.Errorf("decode response failed: %w", err)
@@ -124,7 +125,7 @@ func (r *Retriever) doPost(ctx context.Context, query string) (res *SuccessRespo
 	return res, nil
 }
 
-func (x *Record) ToDoc() *schema.Document {
+func (x *Record) toDoc() *schema.Document {
 	if x == nil || x.Segment == nil {
 		return nil
 	}
