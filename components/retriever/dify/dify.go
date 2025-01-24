@@ -24,14 +24,14 @@ import (
 	"strings"
 
 	"github.com/bytedance/sonic"
-
+	"github.com/cloudwego/eino/components/retriever"
 	"github.com/cloudwego/eino/schema"
 )
 
 const (
-	orgDocIDKey   = "org_doc_id"
-	orgDocNameKey = "org_doc_name"
-	keywordsKey   = "keywords"
+	origDocIDKey   = "orig_doc_id"
+	origDocNameKey = "orig_doc_name"
+	keywordsKey    = "keywords"
 )
 
 type RetrievalModel struct {
@@ -40,7 +40,7 @@ type RetrievalModel struct {
 	RerankingMode         *string         `json:"reranking_mode"`
 	RerankingModel        *RerankingModel `json:"reranking_model"`
 	Weights               *float64        `json:"weights"`
-	TopK                  *int            `json:"top_k,omitempty"`
+	TopK                  *int            `json:"top_k"`
 	ScoreThresholdEnabled *bool           `json:"score_threshold_enabled"`
 	ScoreThreshold        *float64        `json:"score_threshold"`
 }
@@ -48,6 +48,39 @@ type RetrievalModel struct {
 type RerankingModel struct {
 	RerankingProviderName string `json:"reranking_provider_name"`
 	RerankingModelName    string `json:"reranking_model_name"`
+}
+
+func (x *RerankingModel) copy() *RerankingModel {
+	if x == nil {
+		return nil
+	}
+	return &RerankingModel{
+		RerankingProviderName: x.RerankingProviderName,
+		RerankingModelName:    x.RerankingModelName,
+	}
+}
+func copyPtr[T any](ptr *T) *T {
+	if ptr == nil {
+		return nil
+	}
+	val := *ptr
+	return &val
+}
+
+func (x *RetrievalModel) copy() *RetrievalModel {
+	if x == nil {
+		return nil
+	}
+	return &RetrievalModel{
+		SearchMethod:          x.SearchMethod,
+		RerankingEnable:       copyPtr(x.RerankingEnable),
+		RerankingMode:         copyPtr(x.RerankingMode),
+		RerankingModel:        x.RerankingModel.copy(),
+		Weights:               copyPtr(x.Weights),
+		TopK:                  copyPtr(x.TopK),
+		ScoreThresholdEnabled: copyPtr(x.ScoreThresholdEnabled),
+		ScoreThreshold:        copyPtr(x.ScoreThreshold),
+	}
 }
 
 // request Body
@@ -110,13 +143,22 @@ func (r *Retriever) getAuth() string {
 	return fmt.Sprintf("Bearer %s", r.config.APIKey)
 }
 
-func (r *Retriever) doPost(ctx context.Context, query string) (res *successResponse, err error) {
-	data := &request{
-		Query:          query,
-		RetrievalModel: r.config.RetrievalModel,
+func (r *Retriever) getRequest(query string, option *retriever.Options) *request {
+	// 避免污染原始数据，这里必须copy一次
+	rm := r.config.RetrievalModel.copy()
+	if rm != nil {
+		// options 配置优先
+		rm.TopK = option.TopK
+		rm.ScoreThreshold = option.ScoreThreshold
 	}
+	return &request{
+		Query:          query,
+		RetrievalModel: rm,
+	}
+}
 
-	reqData, err := sonic.MarshalString(data)
+func (r *Retriever) doPost(ctx context.Context, query string, option *retriever.Options) (res *successResponse, err error) {
+	reqData, err := sonic.MarshalString(r.getRequest(query, option))
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling data: %w", err)
 	}
@@ -175,14 +217,14 @@ func setOrgDocID(doc *schema.Document, id string) {
 	if doc == nil {
 		return
 	}
-	doc.MetaData[orgDocIDKey] = id
+	doc.MetaData[origDocIDKey] = id
 }
 
 func setOrgDocName(doc *schema.Document, name string) {
 	if doc == nil {
 		return
 	}
-	doc.MetaData[orgDocNameKey] = name
+	doc.MetaData[origDocNameKey] = name
 }
 
 func setKeywords(doc *schema.Document, keywords []string) {
@@ -196,19 +238,28 @@ func GetOrgDocID(doc *schema.Document) string {
 	if doc == nil {
 		return ""
 	}
-	return doc.MetaData[orgDocIDKey].(string)
+	if v, ok := doc.MetaData[origDocIDKey]; ok {
+		return v.(string)
+	}
+	return ""
 }
 
 func GetOrgDocName(doc *schema.Document) string {
 	if doc == nil {
 		return ""
 	}
-	return doc.MetaData[orgDocNameKey].(string)
+	if v, ok := doc.MetaData[origDocNameKey]; ok {
+		return v.(string)
+	}
+	return ""
 }
 
 func GetKeywords(doc *schema.Document) []string {
 	if doc == nil {
 		return nil
 	}
-	return doc.MetaData[keywordsKey].([]string)
+	if v, ok := doc.MetaData[keywordsKey]; ok {
+		return v.([]string)
+	}
+	return nil
 }

@@ -99,7 +99,7 @@ func (r *Retriever) Retrieve(ctx context.Context, query string, opts ...retrieve
 	})
 
 	// 发送检索请求
-	result, err := r.doPost(ctx, query)
+	result, err := r.doPost(ctx, query, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve documents: %w", err)
 	}

@@ -39,14 +39,14 @@ func TestRecord_ToDoc(t *testing.T) {
 				ID:      "1",
 				Content: "test content",
 				MetaData: map[string]interface{}{
-					orgDocIDKey: "doc1",
+					origDocIDKey: "doc1",
 				},
 			}
 
 			result := record.toDoc()
 			convey.So(result.ID, convey.ShouldEqual, expected.ID)
 			convey.So(result.Content, convey.ShouldEqual, expected.Content)
-			convey.So(result.MetaData[orgDocIDKey], convey.ShouldEqual, expected.MetaData[orgDocIDKey])
+			convey.So(result.MetaData[origDocIDKey], convey.ShouldEqual, expected.MetaData[origDocIDKey])
 		})
 
 		PatchConvey("When record is nil", func() {
@@ -95,6 +95,76 @@ func TestMetadataFunctions(t *testing.T) {
 			convey.So(GetOrgDocID(nilDoc), convey.ShouldEqual, "")
 			convey.So(GetOrgDocName(nilDoc), convey.ShouldEqual, "")
 			convey.So(GetKeywords(nilDoc), convey.ShouldBeNil)
+		})
+	})
+}
+
+func TestRetrievalModel_Copy(t *testing.T) {
+	PatchConvey("Test RetrievalModel.copy", t, func() {
+		PatchConvey("When model is nil", func() {
+			var model *RetrievalModel
+			result := model.copy()
+			convey.So(result, convey.ShouldBeNil)
+		})
+
+		PatchConvey("When model has complete configuration", func() {
+			model := &RetrievalModel{
+				SearchMethod:          SearchMethodSemantic,
+				RerankingEnable:       ptrOf(true),
+				RerankingMode:         ptrOf("hybrid"),
+				Weights:               ptrOf(0.7),
+				TopK:                  ptrOf(10),
+				ScoreThreshold:        ptrOf(0.8),
+				ScoreThresholdEnabled: ptrOf(true),
+				RerankingModel: &RerankingModel{
+					RerankingProviderName: "openai",
+					RerankingModelName:    "gpt-3.5-turbo",
+				},
+			}
+
+			result := model.copy()
+			convey.So(result, convey.ShouldNotBeNil)
+			convey.So(result.SearchMethod, convey.ShouldEqual, SearchMethodSemantic)
+			convey.So(*result.RerankingEnable, convey.ShouldBeTrue)
+			convey.So(*result.RerankingMode, convey.ShouldEqual, "hybrid")
+			convey.So(*result.Weights, convey.ShouldEqual, 0.7)
+			convey.So(*result.TopK, convey.ShouldEqual, 10)
+			convey.So(*result.ScoreThreshold, convey.ShouldEqual, 0.8)
+			convey.So(*result.ScoreThresholdEnabled, convey.ShouldBeTrue)
+			convey.So(result.RerankingModel, convey.ShouldNotBeNil)
+			convey.So(result.RerankingModel.RerankingProviderName, convey.ShouldEqual, "openai")
+			convey.So(result.RerankingModel.RerankingModelName, convey.ShouldEqual, "gpt-3.5-turbo")
+		})
+
+		PatchConvey("When model has partial configuration", func() {
+			model := &RetrievalModel{
+				SearchMethod:   SearchMethodKeyword,
+				TopK:           ptrOf(5),
+				RerankingModel: nil,
+			}
+
+			result := model.copy()
+			convey.So(result, convey.ShouldNotBeNil)
+			convey.So(result.SearchMethod, convey.ShouldEqual, SearchMethodKeyword)
+			convey.So(*result.TopK, convey.ShouldEqual, 5)
+			convey.So(result.RerankingEnable, convey.ShouldBeNil)
+			convey.So(result.RerankingMode, convey.ShouldBeNil)
+			convey.So(result.Weights, convey.ShouldBeNil)
+			convey.So(result.ScoreThreshold, convey.ShouldBeNil)
+			convey.So(result.ScoreThresholdEnabled, convey.ShouldBeNil)
+			convey.So(result.RerankingModel, convey.ShouldBeNil)
+		})
+
+		PatchConvey("test RetrievalModel change", func() {
+			model := &RetrievalModel{
+				SearchMethod:   SearchMethodKeyword,
+				TopK:           ptrOf(5),
+				RerankingModel: nil,
+			}
+
+			result := model.copy()
+			result.TopK = ptrOf(10)
+			convey.So(*model.TopK, convey.ShouldEqual, 5)
 		})
 	})
 }
