@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 CloudWeGo Authors
+ * Copyright 2025 CloudWeGo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,35 +18,33 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"os"
+	"log"
+	"time"
 
-	"github.com/cloudwego/eino-ext/components/embedding/openai"
+	"github.com/cloudwego/eino/components/document"
 )
 
 func main() {
-	accessKey := os.Getenv("OPENAI_API_KEY")
-
 	ctx := context.Background()
 
-	var (
-		defaultDim = 1024
-	)
-
-	embedding, err := openai.NewEmbedder(ctx, &openai.EmbeddingConfig{
-		APIKey:     accessKey,
-		Model:      "text-embedding-3-large",
-		Dimensions: &defaultDim,
-		Timeout:    0,
+	log.Printf("===== call Custom Loader directly =====")
+	// 初始化 loader
+	loader, err := NewCustomLoader(&Config{
+		DefaultTimeout:    10 * time.Second,
+		DefaultRetryCount: 10,
 	})
 	if err != nil {
-		panic(fmt.Errorf("new embedder error: %v\n", err))
+		log.Fatalf("NewCustomLoader failed, err=%v", err)
 	}
 
-	resp, err := embedding.EmbedStrings(ctx, []string{"hello", "how are you"})
+	// 加载文档
+	filePath := "../../testdata/test.md"
+	docs, err := loader.Load(ctx, document.Source{
+		URI: filePath,
+	})
 	if err != nil {
-		panic(fmt.Errorf("generate failed, err=%v", err))
+		log.Fatalf("loader.Load failed, err=%v", err)
 	}
 
-	fmt.Printf("output=%v", resp)
+	log.Printf("doc content: %v", docs[0].Content)
 }
