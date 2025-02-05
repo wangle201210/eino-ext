@@ -29,9 +29,14 @@ func TestRecord_ToDoc(t *testing.T) {
 		PatchConvey("When record is valid", func() {
 			record := &Record{
 				Segment: &Segment{
-					Id:         "1",
+					ID:         "1",
 					Content:    "test content",
-					DocumentId: "doc1",
+					DocumentID: "doc1",
+					Document: &Document{
+						ID:             "1",
+						DataSourceType: "markdown",
+						Name:           "test.md",
+					},
 				},
 				Score: 0.8,
 			}
@@ -39,7 +44,8 @@ func TestRecord_ToDoc(t *testing.T) {
 				ID:      "1",
 				Content: "test content",
 				MetaData: map[string]interface{}{
-					origDocIDKey: "doc1",
+					origDocIDKey:   "doc1",
+					origDocNameKey: "test.md",
 				},
 			}
 
@@ -92,6 +98,9 @@ func TestMetadataFunctions(t *testing.T) {
 
 		PatchConvey("When document is nil", func() {
 			var nilDoc *schema.Document
+			setOrgDocID(nilDoc, "doc1")
+			setOrgDocName(nilDoc, "test doc")
+			setKeywords(nilDoc, []string{"test", "keywords"})
 			convey.So(GetOrgDocID(nilDoc), convey.ShouldEqual, "")
 			convey.So(GetOrgDocName(nilDoc), convey.ShouldEqual, "")
 			convey.So(GetKeywords(nilDoc), convey.ShouldBeNil)

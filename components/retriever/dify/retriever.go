@@ -31,7 +31,7 @@ import (
 type RetrieverConfig struct {
 	// APIKey 是 Dify API 的认证密钥
 	APIKey string
-	// Endpoint 是 Dify API 的服务地址
+	// Endpoint 是 Dify API 的服务地址, 默认为: https://api.dify.ai/v1
 	Endpoint string
 	// DatasetID 是知识库的唯一标识
 	DatasetID string
@@ -106,7 +106,6 @@ func (r *Retriever) Retrieve(ctx context.Context, query string, opts ...retrieve
 	// 转换为统一的 Document 格式
 	docs = make([]*schema.Document, 0, len(result.Records))
 
-	// 转换为统一的 Document 格式
 	for _, record := range result.Records {
 		if record == nil || record.Segment == nil {
 			continue

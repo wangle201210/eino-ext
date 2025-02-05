@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	. "github.com/bytedance/mockey"
 	"github.com/cloudwego/eino/components/retriever"
@@ -45,6 +46,7 @@ func TestNewRetriever(t *testing.T) {
 				ret, err := NewRetriever(ctx, &RetrieverConfig{
 					Endpoint:  "https://api.dify.ai/v1",
 					DatasetID: "test",
+					Timeout:   time.Second * 3,
 				})
 				convey.So(err, convey.ShouldNotBeNil)
 				convey.So(err.Error(), convey.ShouldContainSubstring, "api_key is required")
@@ -125,14 +127,14 @@ func TestRetrieve(t *testing.T) {
 					{
 						Score: 0.8,
 						Segment: &Segment{
-							Id:      "1",
+							ID:      "1",
 							Content: "test content 1",
 						},
 					},
 					{
 						Score: 0.6,
 						Segment: &Segment{
-							Id:      "2",
+							ID:      "2",
 							Content: "test content 2",
 						},
 					},
