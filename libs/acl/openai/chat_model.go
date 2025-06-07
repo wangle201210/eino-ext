@@ -141,6 +141,10 @@ type Config struct {
 
 	// TopLogProbs specifies the number of most likely tokens to return at each token position, each with an associated log probability.
 	TopLogProbs int `json:"top_log_probs"`
+
+	// ExtraFields will override any existing fields with the same key.
+	// Optional. Useful for experimental features not yet officially supported.
+	ExtraFields map[string]any `json:"-"`
 }
 
 type Client struct {
@@ -322,12 +326,16 @@ func (c *Client) genRequest(in []*schema.Message, opts ...model.Option) (*openai
 		ToolChoice:  c.toolChoice,
 	}, opts...)
 
+	openaiOptions := model.GetImplSpecificOptions(&openaiOptions{
+		ExtraFields: c.config.ExtraFields,
+	}, opts...)
+
 	req := &openai.ChatCompletionRequest{
 		Model:            *options.Model,
 		MaxTokens:        dereferenceOrZero(options.MaxTokens),
 		Temperature:      options.Temperature,
 		TopP:             dereferenceOrZero(options.TopP),
-		Stop:             c.config.Stop,
+		Stop:             options.Stop,
 		PresencePenalty:  dereferenceOrZero(c.config.PresencePenalty),
 		Seed:             c.config.Seed,
 		FrequencyPenalty: dereferenceOrZero(c.config.FrequencyPenalty),
@@ -335,6 +343,10 @@ func (c *Client) genRequest(in []*schema.Message, opts ...model.Option) (*openai
 		User:             dereferenceOrZero(c.config.User),
 		LogProbs:         c.config.LogProbs,
 		TopLogProbs:      c.config.TopLogProbs,
+	}
+
+	if len(openaiOptions.ExtraFields) > 0 {
+		req.SetExtraFields(openaiOptions.ExtraFields)
 	}
 
 	cbInput := &model.CallbackInput{
@@ -455,7 +467,7 @@ func (c *Client) Generate(ctx context.Context, in []*schema.Message, opts ...mod
 	if err != nil {
 		return nil, fmt.Errorf("failed to create chat completion request: %w", err)
 	}
-	
+
 	ctx = callbacks.OnStart(ctx, cbInput)
 	defer func() {
 		if err != nil {
