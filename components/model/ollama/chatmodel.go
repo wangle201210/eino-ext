@@ -53,7 +53,7 @@ type ChatModelConfig struct {
 
 	Options *api.Options `json:"options"`
 
-	Thinking *bool `json:"thinking"`
+	Thinking *api.ThinkValue `json:"thinking"`
 }
 
 // Check if ChatModel implements model.ChatModel
@@ -425,12 +425,7 @@ func parseJSONToObject(jsonStr string) (map[string]any, error) {
 func toOllamaTools(einoTools []*schema.ToolInfo) ([]api.Tool, error) {
 	var ollamaTools []api.Tool
 	for _, einoTool := range einoTools {
-		properties := make(map[string]struct {
-			Type        api.PropertyType `json:"type"`
-			Items       any              `json:"items,omitempty"`
-			Description string           `json:"description"`
-			Enum        []any            `json:"enum,omitempty"`
-		})
+		properties := make(map[string]api.ToolProperty)
 		var required []string
 
 		openTool, err := einoTool.ParamsOneOf.ToOpenAPIV3()
@@ -442,12 +437,7 @@ func toOllamaTools(einoTools []*schema.ToolInfo) ([]api.Tool, error) {
 			required = openTool.Required
 
 			for name, param := range openTool.Properties {
-				properties[name] = struct {
-					Type        api.PropertyType `json:"type"`
-					Items       any              `json:"items,omitempty"`
-					Description string           `json:"description"`
-					Enum        []any            `json:"enum,omitempty"`
-				}{
+				properties[name] = api.ToolProperty{
 					Type:        []string{param.Value.Type},
 					Description: param.Value.Description,
 					Enum:        param.Value.Enum,
@@ -461,16 +451,11 @@ func toOllamaTools(einoTools []*schema.ToolInfo) ([]api.Tool, error) {
 				Name:        einoTool.Name,
 				Description: einoTool.Desc,
 				Parameters: struct {
-					Type       string   `json:"type"`
-					Defs       any      `json:"$defs,omitempty"`
-					Items      any      `json:"items,omitempty"`
-					Required   []string `json:"required"`
-					Properties map[string]struct {
-						Type        api.PropertyType `json:"type"`
-						Items       any              `json:"items,omitempty"`
-						Description string           `json:"description"`
-						Enum        []any            `json:"enum,omitempty"`
-					} `json:"properties"`
+					Type       string                      `json:"type"`
+					Defs       any                         `json:"$defs,omitempty"`
+					Items      any                         `json:"items,omitempty"`
+					Required   []string                    `json:"required"`
+					Properties map[string]api.ToolProperty `json:"properties"`
 				}{
 					Type:       "object",
 					Required:   required,
