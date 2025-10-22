@@ -35,8 +35,7 @@ func main() {
 		Model:  os.Getenv("ARK_MODEL_ID"),
 	})
 	if err != nil {
-		log.Printf("NewChatModel failed, err=%v", err)
-		return
+		log.Fatalf("NewChatModel failed, err=%v", err)
 	}
 
 	multiModalMsg := schema.UserMessage("")
@@ -46,7 +45,7 @@ func main() {
 	}
 
 	imageStr := base64.StdEncoding.EncodeToString(image)
-	base64Str := "data:image/png;base64," + imageStr
+
 	multiModalMsg.UserInputMultiContent = []schema.MessageInputPart{
 		{
 			Type: schema.ChatMessagePartTypeText,
@@ -56,7 +55,7 @@ func main() {
 			Type: schema.ChatMessagePartTypeImageURL,
 			Image: &schema.MessageInputImage{
 				MessagePartCommon: schema.MessagePartCommon{
-					Base64Data: &base64Str,
+					Base64Data: &imageStr,
 					MIMEType:   "image/png",
 				},
 				Detail: schema.ImageURLDetailAuto,
@@ -68,8 +67,7 @@ func main() {
 		multiModalMsg,
 	})
 	if err != nil {
-		log.Printf("Generate failed, err=%v", err)
-		return
+		log.Fatalf("Generate failed, err=%v", err)
 	}
 
 	log.Printf("Ark ChatModel output: \n%v", resp)
