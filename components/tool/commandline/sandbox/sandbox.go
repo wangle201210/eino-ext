@@ -322,7 +322,7 @@ func (s *DockerSandbox) IsDirectory(ctx context.Context, path string) (bool, err
 	}
 
 	// Use stat command to check path type
-	cmd := []string{"test", "-e", resolvedPath}
+	cmd := []string{"test", "-d", resolvedPath}
 	cmdOutput, err := s.RunCommand(ctx, cmd)
 	if err != nil {
 		return false, fmt.Errorf("failed to check path existence: %w", err)
